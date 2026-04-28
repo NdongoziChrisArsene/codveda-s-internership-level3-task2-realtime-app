@@ -2,21 +2,36 @@ import { useEffect, useState, useRef } from "react";
 import socket from "../socket";
 
 export default function Chat({ username, users }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [messages, setMessages]         = useState([]);
+  const [input, setInput]               = useState("");
   const [notifyTarget, setNotifyTarget] = useState("");
-  const [notifyMsg, setNotifyMsg] = useState("");
-  const bottomRef = useRef(null);
+  const [notifyMsg, setNotifyMsg]       = useState("");
+  const [typingUsers, setTypingUsers]   = useState([]);
+  const bottomRef                       = useRef(null);
+  const typingTimeoutRef                = useRef(null);
 
   useEffect(() => {
+    socket.on("chat:history", (history) => setMessages(history));
+
     socket.on("chat:message", (data) => {
       setMessages((prev) => [...prev, data]);
     });
 
-    return () => socket.off("chat:message");
+    socket.on("typing:update", ({ username: typingUser, isTyping }) => {
+      setTypingUsers((prev) =>
+        isTyping
+          ? [...new Set([...prev, typingUser])]
+          : prev.filter((u) => u !== typingUser)
+      );
+    });
+
+    return () => {
+      socket.off("chat:history");
+      socket.off("chat:message");
+      socket.off("typing:update");
+    };
   }, []);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -24,7 +39,19 @@ export default function Chat({ username, users }) {
   const sendMessage = () => {
     if (!input.trim()) return;
     socket.emit("chat:message", input.trim());
+    socket.emit("typing:stop");
+    clearTimeout(typingTimeoutRef.current);
     setInput("");
+  };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    socket.emit("typing:start");
+
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("typing:stop");
+    }, 2000);
   };
 
   const sendPrivateNotification = () => {
@@ -38,19 +65,10 @@ export default function Chat({ username, users }) {
 
   return (
     <div style={{ flex: 1, padding: "1rem" }}>
-      {/* ── Chat Messages ── */}
       <h3>💬 Chat Room</h3>
-      <div
-        style={{
-          height: "300px",
-          overflowY: "auto",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          padding: "0.75rem",
-          marginBottom: "0.75rem",
-          background: "#f9fafb",
-        }}
-      >
+
+      {/* ── Message List ── */}
+      <div style={{ height: "320px", overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.75rem", background: "#f9fafb", marginBottom: "0.4rem" }}>
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: "0.5rem" }}>
             <strong style={{ color: m.username === username ? "#3b82f6" : "#111" }}>
@@ -58,18 +76,25 @@ export default function Chat({ username, users }) {
             </strong>{" "}
             <span>{m.message}</span>
             <span style={{ fontSize: "0.75rem", color: "#9ca3af", marginLeft: "0.5rem" }}>
-              {new Date(m.timestamp).toLocaleTimeString()}
+              {new Date(m.timestamp || m.createdAt).toLocaleTimeString()}
             </span>
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
 
+      {/* ── Typing Indicator ── */}
+      <div style={{ height: "20px", fontSize: "0.8rem", color: "#6b7280", fontStyle: "italic", marginBottom: "0.4rem" }}>
+        {typingUsers.length > 0 &&
+          `${typingUsers.join(", ")} ${typingUsers.length === 1 ? "is" : "are"} typing...`
+        }
+      </div>
+
       {/* ── Message Input ── */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message..."
           style={{ flex: 1, padding: "0.5rem", borderRadius: "6px", border: "1px solid #d1d5db" }}
