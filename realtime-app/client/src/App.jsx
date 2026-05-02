@@ -9,11 +9,6 @@ export default function App() {
   const [username, setUsername] = useState("");
   const [users, setUsers]       = useState([]);
 
-  useEffect(() => {
-    socket.on("users:update", (userList) => setUsers(userList));
-    return () => socket.off("users:update");
-  }, []);
-
   const handleAuth = (receivedToken, receivedUsername) => {
     socket.auth = { token: receivedToken };
     socket.connect();
@@ -27,6 +22,17 @@ export default function App() {
     setUsername("");
     setUsers([]);
   };
+
+  // ── Move listener AFTER token is set ──────────────────
+  useEffect(() => {
+    if (!token) return; // only listen after login
+
+    socket.on("users:update", (userList) => {
+      setUsers(userList);
+    });
+
+    return () => socket.off("users:update");
+  }, [token]); // ← re-run when token changes
 
   if (!token) return <Auth onAuth={handleAuth} />;
 

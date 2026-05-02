@@ -47,7 +47,6 @@ export default function Chat({ username, users }) {
   const handleInputChange = (e) => {
     setInput(e.target.value);
     socket.emit("typing:start");
-
     clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("typing:stop");
@@ -55,13 +54,24 @@ export default function Chat({ username, users }) {
   };
 
   const sendPrivateNotification = () => {
-    if (!notifyTarget || !notifyMsg.trim()) return;
+    if (!notifyTarget) {
+      alert("Please select a user!");
+      return;
+    }
+    if (!notifyMsg.trim()) {
+      alert("Please type a message!");
+      return;
+    }
     socket.emit("notify:user", {
       targetUsername: notifyTarget,
       message: notifyMsg.trim(),
     });
     setNotifyMsg("");
+    setNotifyTarget("");
   };
+
+  // Filter out current user from dropdown
+  const otherUsers = users.filter((u) => u !== username);
 
   return (
     <div style={{ flex: 1, padding: "1rem" }}>
@@ -69,6 +79,11 @@ export default function Chat({ username, users }) {
 
       {/* ── Message List ── */}
       <div style={{ height: "320px", overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "0.75rem", background: "#f9fafb", marginBottom: "0.4rem" }}>
+        {messages.length === 0 && (
+          <p style={{ color: "#9ca3af", textAlign: "center" }}>
+            No messages yet. Say hello! 👋
+          </p>
+        )}
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: "0.5rem" }}>
             <strong style={{ color: m.username === username ? "#3b82f6" : "#111" }}>
@@ -109,30 +124,38 @@ export default function Chat({ username, users }) {
 
       {/* ── Private Notification ── */}
       <h3>📩 Send Private Notification</h3>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
-        <select
-          value={notifyTarget}
-          onChange={(e) => setNotifyTarget(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #d1d5db" }}
-        >
-          <option value="">Select user...</option>
-          {users.filter((u) => u !== username).map((u) => (
-            <option key={u} value={u}>{u}</option>
-          ))}
-        </select>
-        <input
-          value={notifyMsg}
-          onChange={(e) => setNotifyMsg(e.target.value)}
-          placeholder="Private message..."
-          style={{ flex: 1, padding: "0.5rem", borderRadius: "6px", border: "1px solid #d1d5db" }}
-        />
-        <button
-          onClick={sendPrivateNotification}
-          style={{ padding: "0.5rem 1rem", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
-        >
-          Notify
-        </button>
-      </div>
+
+      {otherUsers.length === 0 ? (
+        <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
+          No other users online. Wait for someone to join! 👥
+        </p>
+      ) : (
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <select
+            value={notifyTarget}
+            onChange={(e) => setNotifyTarget(e.target.value)}
+            style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #d1d5db", minWidth: "130px" }}
+          >
+            <option value="">Select user...</option>
+            {otherUsers.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          <input
+            value={notifyMsg}
+            onChange={(e) => setNotifyMsg(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendPrivateNotification()}
+            placeholder="Private message..."
+            style={{ flex: 1, padding: "0.5rem", borderRadius: "6px", border: "1px solid #d1d5db" }}
+          />
+          <button
+            onClick={sendPrivateNotification}
+            style={{ padding: "0.5rem 1rem", background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+          >
+            Notify
+          </button>
+        </div>
+      )}
     </div>
   );
 }
