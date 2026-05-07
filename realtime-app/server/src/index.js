@@ -12,13 +12,11 @@ const authRoutes                 = require("./routes/auth");
 const app        = express();
 const httpServer = http.createServer(app);
 
-// ── Allow both ports to avoid issues ────────────────────
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
 ];
 
-// ── Socket.io server ────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
     origin:  allowedOrigins,
@@ -32,7 +30,6 @@ app.use(cors({
 app.use(express.json());
 app.use("/auth", authRoutes);
 
-// ── JWT Socket Handshake Middleware ──────────────────────
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
 
@@ -50,7 +47,6 @@ io.use((socket, next) => {
 
 registerSocketHandlers(io);
 
-// ── Sync PostgreSQL tables then start server ─────────────
 syncDatabase().then(() => {
   httpServer.listen(process.env.PORT, () => {
     console.log(`🚀 Server running on http://localhost:${process.env.PORT}`);

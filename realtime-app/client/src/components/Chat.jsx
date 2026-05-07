@@ -70,7 +70,6 @@ export default function Chat({ username, users }) {
     setNotifyTarget("");
   };
 
-  // Filter out current user from dropdown
   const otherUsers = users.filter((u) => u !== username);
 
   return (
@@ -98,14 +97,12 @@ export default function Chat({ username, users }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Typing Indicator ── */}
       <div style={{ height: "20px", fontSize: "0.8rem", color: "#6b7280", fontStyle: "italic", marginBottom: "0.4rem" }}>
         {typingUsers.length > 0 &&
           `${typingUsers.join(", ")} ${typingUsers.length === 1 ? "is" : "are"} typing...`
         }
       </div>
 
-      {/* ── Message Input ── */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
         <input
           value={input}
@@ -122,7 +119,6 @@ export default function Chat({ username, users }) {
         </button>
       </div>
 
-      {/* ── Private Notification ── */}
       <h3>📩 Send Private Notification</h3>
 
       {otherUsers.length === 0 ? (

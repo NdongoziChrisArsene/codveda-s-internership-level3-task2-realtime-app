@@ -7,11 +7,9 @@ function registerSocketHandlers(io) {
     const username = socket.user.username; 
     connectedUsers[socket.id] = username;
 
-    // Join personal room for private notifications
     socket.join(`user:${username}`);
     console.log(`✅ ${username} connected`);
 
-    // ── 1. Load last 50 public messages from PostgreSQL ────
     const history = await Message.findAll({
       where:  { type: "public" },
       order:  [["createdAt", "ASC"]],
@@ -20,7 +18,6 @@ function registerSocketHandlers(io) {
 
     socket.emit("chat:history", history);
 
-    // --- 2. Announce new user ------------------
     io.emit("notification", {
       type:    "info",
       message: `${username} has joined the chat`,
@@ -28,7 +25,6 @@ function registerSocketHandlers(io) {
 
     io.emit("users:update", Object.values(connectedUsers));
 
-    // --- 3. Public chat message — save + broadcast -----------
     socket.on("chat:message", async (message) => {
       const saved = await Message.create({
         username,
@@ -43,7 +39,6 @@ function registerSocketHandlers(io) {
       });
     });
 
-    // --- 4. Private notification — save + send to target ------
     socket.on("notify:user", async ({ targetUsername, message }) => {
       await Message.create({
         username,
@@ -58,7 +53,6 @@ function registerSocketHandlers(io) {
       });
     });
 
-    // --- 5. Typing indicators ----------------------
     socket.on("typing:start", () => {
       socket.broadcast.emit("typing:update", { username, isTyping: true });
     });
@@ -67,7 +61,6 @@ function registerSocketHandlers(io) {
       socket.broadcast.emit("typing:update", { username, isTyping: false });
     });
 
-    // --- 6. Disconnect ---------------------------------
     socket.on("disconnect", () => {
       delete connectedUsers[socket.id];
 
@@ -78,7 +71,6 @@ function registerSocketHandlers(io) {
 
       io.emit("users:update", Object.values(connectedUsers));
 
-      // Clear typing indicator on disconnect
       socket.broadcast.emit("typing:update", { username, isTyping: false });
 
       console.log(`❌ ${username} disconnected`);

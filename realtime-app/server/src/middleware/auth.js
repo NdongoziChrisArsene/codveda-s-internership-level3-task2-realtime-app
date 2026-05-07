@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 
-// Verify JWT from HTTP Authorization header
 const getUser = (req) => {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return null;
@@ -13,7 +12,6 @@ const getUser = (req) => {
   }
 };
 
-// Throw error if user is not authenticated
 const requireAuth = (context) => {
   if (!context.user)
     throw new Error("Authentication required. Please log in.");

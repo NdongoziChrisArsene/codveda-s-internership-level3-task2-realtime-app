@@ -23,9 +23,8 @@ export default function App() {
     setUsers([]);
   };
 
-  // ── Move listener AFTER token is set ──────────────────
   useEffect(() => {
-    if (!token) return; // only listen after login
+    if (!token) return; 
 
     socket.on("users:update", (userList) => {
       setUsers(userList);
